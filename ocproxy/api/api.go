@@ -31,8 +31,8 @@ import (
 	"syscall"
 	"time"
 
-	reva_api "github.com/cernbox/reva/api"
-	"github.com/cernbox/reva/ocproxy/api/static"
+	reva_api "github.com/cernbox/revaold/api"
+	"github.com/cernbox/revaold/ocproxy/api/static"
 
 	"github.com/bluele/gcache"
 	"github.com/disintegration/imaging"
