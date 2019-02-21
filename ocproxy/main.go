@@ -48,6 +48,8 @@ func init() {
 
 	gc.Add("apps-mail-server", "cernmx.cern.ch:25", "An IMAP mail server where to send mails")
 	gc.Add("apps-mail-server-from-address", "cernbox-noreply@cern.ch", "The sender of the mail (FROM header)")
+	
+	gc.Add("apps-onlyoffice-document-server", "example.org", "the location of the onlyoffice server")
 
 	gc.Add("cache-size", 1000000, "cache size for md records")
 	gc.Add("cache-eviction", 86400, "cache eviction time in seconds for md records")
@@ -83,6 +85,7 @@ func main() {
 		MailServer:            gc.GetString("apps-mail-server"),
 		MailServerFromAddress: gc.GetString("apps-mail-server-from-address"),
 		Hostname:              gc.GetString("hostname"),
+		OnlyOfficeDocumentServer: gc.GetString("apps-onlyoffice-document-server"),
 	}
 
 	_, err := api.New(opts)

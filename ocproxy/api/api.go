@@ -176,6 +176,8 @@ func (p *proxy) registerRoutes() {
 	p.router.HandleFunc("/index.php/apps/onlyoffice/storage/track/{path:.*}", p.tokenAuth(p.onlyOfficeTrack)).Methods("POST")
 	p.router.HandleFunc("/index.php/apps/onlyoffice/storage/download/{path:.*}", p.tokenAuth(p.onlyOfficeDownload)).Methods("GET")
 	p.router.HandleFunc("/index.php/apps/onlyoffice/ajax/new", p.tokenAuth(p.onlyOfficeNew)).Methods("POST")
+	p.router.HandleFunc("/index.php/apps/onlyoffice/config", p.onlyOfficeMainConfig).Methods("GET")
+
 
 }
 
@@ -647,20 +649,22 @@ func (p *proxy) onlyOfficeConfig(w http.ResponseWriter, r *http.Request) {
 	// request sent to onlyoffice to increase this value.
 	// create uuid key and set it to map
 	// TODO(labkode): onlyOffice to increase key value
-	key := md.Etag
-	if len(key) > 20 {
-		key = key[0:20]
-	}
+	//key := md.Etag
+	//if len(key) > 20 {
+		//key = key[0:20]
+	//}
 	// remove special chars
-	key = strings.Replace(key, ":", "", -1)
-	key = strings.Replace(key, "\"", "", -1)
+	//key = strings.Replace(key, ":", "", -1)
+	//key = strings.Replace(key, "\"", "", -1)
+
+	// key cannot contain colon (:), use ._. as separator
+	key := md.Id
+	key = strings.Replace(key, ":", "._.", -1)
 	p.onlyOfficeMutex.Lock()
 	p.onlyOfficeMap[md.EosFile] = key
 	p.onlyOfficeMutex.Unlock()
 
-	p.logger.Info(fmt.Sprintf("onlyoffice track: key=%s for path=%s for md=%+v", key, fn, md))
-	//key := uuid.Must(uuid.NewV4()).String()
-
+	p.logger.Info(fmt.Sprintf("office-engine onlyoffice track: key=%s for path=%s for md=%+v", key, fn, md))
 	url := fmt.Sprintf("https://%s/index.php/apps/onlyoffice/storage/download", p.hostname) + md.Path + "?x-access-token=" + accessToken
 
 	msg := `{
@@ -1238,6 +1242,7 @@ func (p *proxy) wopiPublicOpen(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(encoded)
+	p.logger.Info(fmt.Sprintf("office-engine microsoft office 365 publicopen: eospath=%s", md.EosFile))
 }
 
 func (p *proxy) wopiOpen(w http.ResponseWriter, r *http.Request) {
@@ -1336,6 +1341,23 @@ func (p *proxy) wopiOpen(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(encoded)
+	p.logger.Info(fmt.Sprintf("office-engine microsoft office 365 open: eospath=%s", md.EosFile))
+}
+
+func (p *proxy) onlyOfficeMainConfig(w http.ResponseWriter, r *http.Request) {
+	payload := struct{
+		DocumentServer string `json:"document_server"`
+	} {
+		DocumentServer: p.onlyOfficeDocumentServer,
+	}
+	j, err := json.Marshal(payload)
+	if err != nil {
+		p.logger.Error("", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(j)
 }
 
 func (p *proxy) getWopiConfig(w http.ResponseWriter, r *http.Request) {
@@ -1855,6 +1877,8 @@ type Options struct {
 	MailServerFromAddress string
 
 	Hostname string
+
+	OnlyOfficeDocumentServer string
 }
 
 func (opt *Options) init() {
@@ -1996,6 +2020,7 @@ func New(opt *Options) (http.Handler, error) {
 
 		onlyOfficeMutex: &sync.Mutex{},
 		onlyOfficeMap:   map[string]string{},
+		onlyOfficeDocumentServer: opt.OnlyOfficeDocumentServer,
 	}
 
 	proxy.registerRoutes()
@@ -2050,6 +2075,7 @@ type proxy struct {
 
 	onlyOfficeMutex *sync.Mutex
 	onlyOfficeMap   map[string]string
+	onlyOfficeDocumentServer string
 }
 
 // TODO(labkode): store this global var inside the proxy
